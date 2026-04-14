@@ -1,0 +1,102 @@
+[
+  {
+    "id": "seed-1",
+    "name": "Priya Nair",
+    "major": "CS + Data Science",
+    "year": "Junior",
+    "currentClasses": ["CS 571", "DS 471", "STAT 333", "Math 340"],
+    "projectIdea": "Building an ML model that predicts campus dining hall wait times using historical data and real-time foot traffic sensors, so students can plan their meals without wasting time in line.",
+    "hobby": "Bouldering at the Nick Recreation Center",
+    "freeTime": "Weekday evenings after 6pm, Sunday afternoons"
+  },
+  {
+    "id": "seed-2",
+    "name": "Jake Sullivan",
+    "major": "Computer Science",
+    "year": "Senior",
+    "currentClasses": ["CS 537", "CS 544", "CS 570"],
+    "projectIdea": "A full-stack web app for subletting off-campus housing — think Airbnb but specifically for UW students needing short-term sublets during summer or study abroad semesters.",
+    "hobby": "Playing guitar at open mic nights on State Street",
+    "freeTime": "Tuesday and Thursday afternoons, Saturday mornings"
+  },
+  {
+    "id": "seed-3",
+    "name": "Aisha Johnson",
+    "major": "Business + Computer Science",
+    "year": "Junior",
+    "currentClasses": ["CS 506", "ACCT 300", "MHR 300", "CS 400"],
+    "projectIdea": "A B2B SaaS platform for local restaurants to manage their inventory and reduce food waste by connecting surplus food with local food banks and student organizations.",
+    "hobby": "Training for half-marathons along the lakeside path",
+    "freeTime": "Weekday mornings before 10am, Friday afternoons"
+  },
+  {
+    "id": "seed-4",
+    "name": "Marcus Chen",
+    "major": "Electrical and Computer Engineering",
+    "year": "Senior",
+    "currentClasses": ["ECE 453", "ECE 537", "ECE 551", "CS 552"],
+    "projectIdea": "An IoT sensor network installed throughout Lakeshore residence halls to monitor air quality, noise levels, and occupancy — giving students real-time data about their dorm environment.",
+    "hobby": "Homebrewing craft beer and experimenting with Wisconsin hops",
+    "freeTime": "Wednesday evenings, weekends (flexible)"
+  },
+  {
+    "id": "seed-5",
+    "name": "Sofia Reyes",
+    "major": "Data Science",
+    "year": "Sophomore",
+    "currentClasses": ["DS 201", "STAT 240", "CS 301", "Math 222"],
+    "projectIdea": "An interactive sports analytics dashboard for UW Badger hockey, tracking player performance metrics and visualizing game patterns to help the coaching staff and fans better understand team strategy.",
+    "hobby": "Salsa dancing at the weekly Latin Night events on campus",
+    "freeTime": "Monday and Wednesday evenings, Saturday afternoons"
+  },
+  {
+    "id": "seed-6",
+    "name": "Tyler Brooks",
+    "major": "Computer Science",
+    "year": "Sophomore",
+    "currentClasses": ["CS 300", "CS 354", "Math 221", "ENGL 100"],
+    "projectIdea": "A mobile app for spontaneous study group coordination — you post a subject you're struggling with and your location on campus, and it instantly matches you with nearby students in the same class.",
+    "hobby": "Competitive gaming (Valorant) and watching esports tournaments",
+    "freeTime": "Afternoons most days, late evenings on weekends"
+  },
+  {
+    "id": "seed-7",
+    "name": "Neha Sharma",
+    "major": "Computer Science (PhD)",
+    "year": "Grad",
+    "currentClasses": ["CS 839", "CS 760", "CS 880"],
+    "projectIdea": "Fine-tuning a large language model specifically for academic paper summarization and citation recommendation — helping researchers quickly identify related work and synthesize literature reviews.",
+    "hobby": "Hiking sections of the Ice Age National Scenic Trail on weekends",
+    "freeTime": "Flexible schedule — prefer weekend mornings or weekday afternoons"
+  },
+  {
+    "id": "seed-8",
+    "name": "Ethan Park",
+    "major": "Industrial and Systems Engineering",
+    "year": "Senior",
+    "currentClasses": ["ISyE 323", "ISyE 421", "CS 412", "ECON 410"],
+    "projectIdea": "A supply chain optimization startup focused on helping small Midwestern manufacturers reduce logistics costs using operations research algorithms and real-time freight data.",
+    "hobby": "Exploring every coffee shop on State Street and rating their espresso",
+    "freeTime": "Tuesday and Thursday mornings, Sunday afternoons"
+  },
+  {
+    "id": "seed-9",
+    "name": "Lily Walsh",
+    "major": "Statistics",
+    "year": "Junior",
+    "currentClasses": ["STAT 451", "STAT 424", "CS 320", "Math 443"],
+    "projectIdea": "A predictive model for UW-Madison parking availability — using historical permit data and class schedules to forecast which lots and ramps will have open spots throughout the day.",
+    "hobby": "Landscape photography, especially capturing sunsets over Lake Mendota",
+    "freeTime": "Weekday evenings, Saturday mornings before noon"
+  },
+  {
+    "id": "seed-10",
+    "name": "Raj Patel",
+    "major": "Computer Science + Mathematics",
+    "year": "Senior",
+    "currentClasses": ["CS 704", "CS 736", "Math 541", "Math 632"],
+    "projectIdea": "Designing and implementing a compiler for a small educational programming language aimed at introductory CS students — something simpler than Python but more explicit about memory and types.",
+    "hobby": "Playing in the UW Chess Club and analyzing grandmaster games",
+    "freeTime": "Flexible most afternoons, prefer weekday meetups"
+  }
+]

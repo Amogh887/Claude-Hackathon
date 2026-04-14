@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isWiscEmail() {
+      return request.auth.token.email.matches('.*@wisc[.]edu');
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isMatchParticipant(matchData) {
+      return request.auth.uid == matchData.userAId
+          || request.auth.uid == matchData.userBId;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && isWiscEmail();
+
+      allow create: if isSignedIn()
+        && isWiscEmail()
+        && isOwner(userId)
+        && request.resource.data.uid == userId
+        && request.resource.data.email == request.auth.token.email;
+
+      allow update: if isSignedIn()
+        && isWiscEmail()
+        && isOwner(userId)
+        && !('punishment' in request.resource.data.diff(resource.data).affectedKeys())
+        && !('currentMatchId' in request.resource.data.diff(resource.data).affectedKeys())
+        && !('calendarTokens' in request.resource.data.diff(resource.data).affectedKeys());
+
+      allow delete: if false;
+    }
+
+    match /matches/{matchId} {
+      allow read: if isSignedIn()
+        && isWiscEmail()
+        && isMatchParticipant(resource.data);
+
+      allow create: if false;
+
+      allow update: if isSignedIn()
+        && isWiscEmail()
+        && isMatchParticipant(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['votes']);
+
+      allow delete: if false;
+    }
+  }
+}
