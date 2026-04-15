@@ -1,71 +1,234 @@
+import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
-import type { Profile, MatchResponse } from "./types";
+import type {
+  ExtractedResume,
+  EventSuggestion,
+  FreeWindow,
+  RawEvent,
+  UserProfile,
+} from "./types";
 
 const client = new Anthropic();
+const MODEL = "claude-sonnet-4-6";
 
-const SYSTEM_PROMPT = `You are a professional networking matchmaker for UW-Madison students.
-Your job is to analyze a new student's profile and find their top 3 best matches from a pool of existing student profiles.
-
-For each match you must:
-1. Calculate a compatibility score from 1 to 10 based on: overlapping classes, complementary or matching project ideas, shared hobbies, and free time overlap.
-2. Write a 2–3 sentence match reason explaining WHY they would work well together professionally or as project collaborators.
-3. Extract 2–4 shared interests as short bullet strings.
-4. Suggest a SPECIFIC UW-Madison campus location and a day/time window to meet, based on the free time text both profiles provide. Prefer well-known spots: Memorial Union Terrace, College Library, Grainger Hall, Gordon's Market & Deli, Union South, Babcock Hall, Rathskeller, Engineering Hall, Memorial Library.
-
-Rules:
-- Return ONLY valid JSON. No markdown, no explanation text outside the JSON.
-- Always return exactly 3 matches, sorted by compatibilityScore descending.
-- If free time overlap is unclear, suggest "Saturday morning" as a safe default.
-- The "profile" field in each match must be the full Profile object from the candidate pool.
-
-Output schema (exact):
-{
-  "matches": [
-    {
-      "profile": { ...full Profile object... },
-      "compatibilityScore": 8,
-      "matchReason": "...",
-      "sharedInterests": ["...", "..."],
-      "meetingSuggestion": {
-        "location": "Memorial Union Terrace",
-        "day": "Saturday morning",
-        "rationale": "Both of you mentioned weekend mornings work well..."
-      }
-    }
-  ]
-}`;
-
-function buildUserMessage(newProfile: Profile, seedProfiles: Profile[]): string {
-  return `NEW PROFILE (find matches for this person):
-${JSON.stringify(newProfile, null, 2)}
-
-CANDIDATE POOL (choose the top 3 matches from these):
-${JSON.stringify(seedProfiles, null, 2)}`;
+function extractJson<T>(text: string): T {
+  const stripped = text
+    .replace(/^```(?:json)?\n?/, "")
+    .replace(/\n?```$/, "")
+    .trim();
+  const start = Math.min(
+    ...["{", "["]
+      .map((c) => stripped.indexOf(c))
+      .filter((i) => i >= 0)
+  );
+  const end = Math.max(stripped.lastIndexOf("}"), stripped.lastIndexOf("]"));
+  const json =
+    start >= 0 && end >= 0 ? stripped.substring(start, end + 1) : stripped;
+  return JSON.parse(json) as T;
 }
 
-export async function getMatches(
-  newProfile: Profile,
-  seedProfiles: Profile[]
-): Promise<MatchResponse> {
+export async function parseResumeFromPdf(
+  pdfBytes: Buffer
+): Promise<ExtractedResume> {
+  const base64 = pdfBytes.toString("base64");
   const message = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model: MODEL,
     max_tokens: 2048,
-    system: SYSTEM_PROMPT,
+    system:
+      "You extract structured data from resumes. Return ONLY a valid JSON object matching the schema. No prose, no markdown.",
     messages: [
       {
         role: "user",
-        content: buildUserMessage(newProfile, seedProfiles),
+        content: [
+          {
+            type: "document",
+            source: {
+              type: "base64",
+              media_type: "application/pdf",
+              data: base64,
+            },
+            cache_control: { type: "ephemeral" },
+          },
+          {
+            type: "text",
+            text: `Extract the following from this resume as JSON:
+{
+  "skills": ["specific technical skills, tools, languages, frameworks"],
+  "experiences": ["one-line summaries of each job/internship"],
+  "projects": ["one-line summaries of each project"],
+  "clubs": ["club names, RSOs, organizations"],
+  "summary": "a 2-sentence professional summary"
+}
+Return ONLY the JSON object. No other text.`,
+          },
+        ],
       },
     ],
   });
 
   const text = (message.content[0] as { type: "text"; text: string }).text;
-  // Strip ```json fences if present, then find the start of the JSON object
-  const stripped = text
-    .replace(/^```json\n?/, "")
-    .replace(/\n?```$/, "")
-    .trim();
-  const jsonStart = stripped.indexOf("{");
-  const json = jsonStart >= 0 ? stripped.substring(jsonStart) : stripped;
-  return JSON.parse(json) as MatchResponse;
+  return extractJson<ExtractedResume>(text);
+}
+
+export async function skillSimilarityScore(
+  resumeA: ExtractedResume,
+  resumeB: ExtractedResume
+): Promise<number> {
+  const message = await client.messages.create({
+    model: MODEL,
+    max_tokens: 256,
+    system:
+      "You rate how well two students' skills/experiences complement each other for collaboration. Return ONLY a JSON object with a single integer field 'score' (0-10).",
+    messages: [
+      {
+        role: "user",
+        content: `Student A:
+skills: ${resumeA.skills.join(", ")}
+projects: ${resumeA.projects.join(" | ")}
+clubs: ${resumeA.clubs.join(", ")}
+
+Student B:
+skills: ${resumeB.skills.join(", ")}
+projects: ${resumeB.projects.join(" | ")}
+clubs: ${resumeB.clubs.join(", ")}
+
+How well do these two students complement each other for collaboration or professional networking? Score 0-10 where 10 = perfect synergy (overlapping interests, complementary skills) and 0 = no overlap at all.
+
+Return ONLY: {"score": <number>}`,
+      },
+    ],
+  });
+
+  const text = (message.content[0] as { type: "text"; text: string }).text;
+  const parsed = extractJson<{ score: number }>(text);
+  return Math.max(0, Math.min(10, parsed.score));
+}
+
+const SUGGEST_SYSTEM_PROMPT = `You are a UW-Madison meeting planner helping two students meet in person for the first time.
+
+You receive:
+- Two student profiles (major, classes, hobbies, skills, meeting preferences)
+- Shared free time windows from both calendars
+- A list of real events discovered from the web (club meetings, hackathons, symposiums, lectures, movies at Union South, etc.)
+
+You must propose EXACTLY 3 meeting suggestions covering a variety of vibes:
+
+SUGGESTION 1 — REAL UW EVENT:
+Must come from the discoveredEvents list. Prefer club meetings, RSO events, hackathons, symposiums, lectures, workshops, or movies at Union South. Set isRealEvent: true and put the source URL in sourceUrl.
+
+SUGGESTION 2 — CASUAL CAMPUS / STATE STREET:
+A coffee chat or low-key hangout. Pick a real place like: Colectivo on State Street, Ancora Coffee, Michelangelo's Coffee House, Memorial Union Terrace, Rathskeller, Babcock Hall Dairy Store, Gordon's Market, Union South Sett, or similar. Set isRealEvent: false.
+
+SUGGESTION 3 — CREATIVE PICK:
+Something more distinctive. Could be a movie at Union South's Marquee Cinema, Rathskeller trivia night, ice skating at the Shell, a walk along Lakeshore Path to Picnic Point, Nick's climbing gym, bowling at the Sett, or another real event from discoveredEvents. Pick based on the students' meetPreferences (active / coffee_chat / moderate).
+
+RULES:
+- Each suggestion MUST have a specific dateTime (ISO 8601) that falls inside ONE of the provided free windows.
+- Each suggestion's "type" must be one of: "active", "coffee_chat", or "moderate".
+- "whyThisWorks" must be 2 sentences that reference BOTH students' actual classes/hobbies/projects by name.
+- "verifyTime" should be true only if the event comes from discoveredEvents AND dateConfidence was "low" or "none".
+- "location" should be specific and real (building name, address, or campus landmark).
+- Return ONLY a valid JSON array of 3 EventSuggestion objects. No prose, no markdown, no explanation.
+
+Schema:
+[
+  {
+    "id": "sug-1",
+    "title": "...",
+    "description": "...",
+    "location": "...",
+    "dateTime": "2024-01-15T15:00:00-06:00",
+    "type": "coffee_chat",
+    "sourceUrl": "https://..." | null,
+    "whyThisWorks": "...",
+    "isRealEvent": true,
+    "verifyTime": false
+  }
+]`;
+
+export async function suggestMeetings(
+  userA: UserProfile,
+  userB: UserProfile,
+  sharedWindows: FreeWindow[],
+  discoveredEvents: RawEvent[]
+): Promise<EventSuggestion[]> {
+  const profileA = {
+    major: userA.major,
+    year: userA.year,
+    classes: userA.currentClasses,
+    hobbies: userA.hobbies,
+    meetPreferences: userA.meetPreferences,
+    skills: userA.extractedResume?.skills || [],
+    projects: userA.extractedResume?.projects || [],
+    clubs: userA.extractedResume?.clubs || [],
+  };
+  const profileB = {
+    major: userB.major,
+    year: userB.year,
+    classes: userB.currentClasses,
+    hobbies: userB.hobbies,
+    meetPreferences: userB.meetPreferences,
+    skills: userB.extractedResume?.skills || [],
+    projects: userB.extractedResume?.projects || [],
+    clubs: userB.extractedResume?.clubs || [],
+  };
+
+  const message = await client.messages.create({
+    model: MODEL,
+    max_tokens: 2048,
+    system: SUGGEST_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content: `Student A:
+${JSON.stringify(profileA, null, 2)}
+
+Student B:
+${JSON.stringify(profileB, null, 2)}
+
+Shared free windows (both users available):
+${JSON.stringify(sharedWindows, null, 2)}
+
+Discovered real UW-Madison events from the web:
+${JSON.stringify(discoveredEvents, null, 2)}
+
+Propose exactly 3 meeting suggestions following the system rules. Return ONLY the JSON array.`,
+      },
+    ],
+  });
+
+  const text = (message.content[0] as { type: "text"; text: string }).text;
+  return extractJson<EventSuggestion[]>(text);
+}
+
+export async function suggestCompromise(
+  userA: UserProfile,
+  userB: UserProfile,
+  voteA: EventSuggestion,
+  voteB: EventSuggestion,
+  sharedWindows: FreeWindow[]
+): Promise<EventSuggestion> {
+  const message = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    system:
+      "You are a meeting mediator. Two students voted for different events. Propose ONE compromise event that blends the spirit of both choices at UW-Madison. Return ONLY a JSON object matching the EventSuggestion schema.",
+    messages: [
+      {
+        role: "user",
+        content: `Student A picked: ${JSON.stringify(voteA)}
+Student B picked: ${JSON.stringify(voteB)}
+
+Student A profile: ${userA.displayName}, ${userA.major}, hobbies: ${userA.hobbies.join(", ")}
+Student B profile: ${userB.displayName}, ${userB.major}, hobbies: ${userB.hobbies.join(", ")}
+
+Shared free windows: ${JSON.stringify(sharedWindows)}
+
+Propose ONE compromise EventSuggestion. Pick a specific real UW-Madison location. Use id "compromise-1". Return ONLY the JSON object.`,
+      },
+    ],
+  });
+
+  const text = (message.content[0] as { type: "text"; text: string }).text;
+  return extractJson<EventSuggestion>(text);
 }

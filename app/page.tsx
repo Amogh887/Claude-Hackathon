@@ -31,7 +31,7 @@ export default function Home() {
             BadgerConnect
           </span>
           <Link
-            href="/profile"
+            href="/login"
             className="text-sm font-medium text-red-600 hover:text-red-700"
           >
             Get Started →
@@ -56,7 +56,7 @@ export default function Home() {
         </p>
         <div className="mt-10 flex items-center justify-center gap-4">
           <Link
-            href="/profile"
+            href="/login"
             className="bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3.5 rounded-xl text-base transition-colors shadow-sm"
           >
             Create My Profile
@@ -120,7 +120,7 @@ export default function Home() {
           It takes 2 minutes. Your next co-founder or study partner is waiting.
         </p>
         <Link
-          href="/profile"
+          href="/login"
           className="bg-red-600 hover:bg-red-700 text-white font-semibold px-10 py-4 rounded-xl text-base transition-colors shadow-sm inline-block"
         >
           Get Started — It&apos;s Free

@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/checkin-prompt",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/check-noshow",
+      "schedule": "30 * * * *"
+    }
+  ]
+}

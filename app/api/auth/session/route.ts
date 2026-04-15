@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import {
   SESSION_COOKIE_NAME,
